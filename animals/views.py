@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from animals.models import Animal
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
 from .models import Animal
 import json
 
