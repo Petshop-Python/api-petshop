@@ -39,6 +39,6 @@ def login_api(request):
 
         if user is not None:
             login(request, user)
-            return JsonResponse({'status': 'success', 'user_id': user.id})
+            return JsonResponse({'status': 'success', 'user_id': user.id, 'name': user.username})
         else:
             return JsonResponse({'status': 'error', 'message': 'Nome de usuário, e-mail ou senha inválidos.'}, status=400)
