@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'animals',
     'corsheaders',
     'accounts',
+    'product',
 ]
 
 MIDDLEWARE = [
