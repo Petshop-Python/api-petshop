@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import Product, Sale
+from product.models import Product
+from .models import Sale
 import json
 
 @csrf_exempt

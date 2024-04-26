@@ -1,6 +1,5 @@
 from django.db import models
-
-
+from sales.models import Sale
 
 class Product(models.Model):
     product_code = models.CharField(max_length=100, verbose_name='Product Code')

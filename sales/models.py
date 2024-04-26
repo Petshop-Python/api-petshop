@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from product.models import Product
+# from product.models import Product
 
 
 
