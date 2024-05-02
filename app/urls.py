@@ -4,7 +4,7 @@ from animals.views import animal_view, animal_create,animal_delete, animal_updat
 from django.urls import path
 from accounts.views import registro_api,login_api
 from product.views import list_products,create_product,update_product,delete_product
-from sales.views import sell_product
+from sales.views import sell_product,list_sales,delete_all_sales
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -18,5 +18,7 @@ urlpatterns = [
     path('product/save/', create_product),
     path('product/update/',update_product),
     path('product/delete/', delete_product),
-    path('product/sell-product/',sell_product)
+    path('product/sell-product/',sell_product),
+    path('product/report',list_sales),
+    path('product/delete/all-sales/', delete_all_sales)
 ]
