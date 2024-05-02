@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from product.models import Product
+from django.utils import timezone
 from .models import Sale
 import json
 
@@ -15,18 +16,82 @@ def sell_product(request):
             if product_id is None or quantity_sold is None:
                 return JsonResponse({'error': 'Product ID and quantity sold are required'}, status=400)
             
-            product = Product.objects.get(id=product_id)
-            sale = product.sell(quantity_sold)
-            
+            # Verifica se já existe uma venda para o produto
+            try:
+                product = Product.objects.get(id=product_id)
+                sale = Sale.objects.get(product=product)
+                
+                # Atualiza a quantidade vendida, o preço total e a data de atualização
+                sale.quantity_sold += quantity_sold
+                sale.total_price += quantity_sold * product.price
+                sale.update_date = timezone.now()  # Atualiza a data de atualização
+                sale.save()
+            except Sale.DoesNotExist:
+                # Cria uma nova venda se não houver uma venda existente
+                total_price = quantity_sold * product.price
+                sale = Sale.objects.create(product=product, quantity_sold=quantity_sold, total_price=total_price)
+
             return JsonResponse({'message': 'Sale registered successfully', 'sale_id': sale.id}, status=201)
         
         except Product.DoesNotExist:
             return JsonResponse({'error': 'Product not found'}, status=404)
         
-        except ValueError as e:
-            return JsonResponse({'error': str(e)}, status=400)
-        
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
+
+
+@csrf_exempt
+def list_sales(request):
+    if request.method == 'GET':
+        # Obtém os parâmetros de consulta para o mês e ano, se fornecidos
+        month = request.GET.get('month')
+        year = request.GET.get('year')
+
+        # Consulta todas as vendas no banco de dados
+        sales = Sale.objects.all()
+
+        # Filtra as vendas se o mês e o ano forem fornecidos
+        if month and year:
+            try:
+                month = int(month)
+                year = int(year)
+                sales = sales.filter(sale_date__year=year, sale_date__month=month)
+            except ValueError:
+                return JsonResponse({'error': 'Invalid month or year format'}, status=400)
+
+        # Lista para armazenar os dados serializados de cada venda
+        serialized_sales = []
+
+        # Itera sobre cada venda e serializa todos os campos
+        for sale in sales:
+            serialized_sale = {
+                'id': sale.id,
+                'product_id': sale.product.id,
+                'product_name': sale.product.product_name,
+                'quantity_sold': sale.quantity_sold,
+                'total_price': str(sale.total_price),
+                'sale_date': sale.sale_date.strftime('%Y-%m-%d'),
+                'create_date': sale.create_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'update_date': sale.update_date.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            serialized_sales.append(serialized_sale)
+
+        # Retorna os dados serializados como uma resposta JSON
+        return JsonResponse(serialized_sales, safe=False)
+    else:
+        return JsonResponse({'error': 'Only GET requests are allowed'}, status=405)
+
+
+@csrf_exempt
+def delete_all_sales(request):
+    if request.method == 'DELETE':
+        try:
+            # Exclui todos os registros da tabela Sale
+            Sale.objects.all().delete()
+            return JsonResponse({'message': 'All sales deleted successfully'}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Only DELETE requests are allowed'}, status=405)
