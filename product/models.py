@@ -20,12 +20,21 @@ class Product(models.Model):
         
         total_price = quantity_sold * self.price
         
-        # Criar uma instância de Sale e salvá-la no banco de dados
-        sale = Sale.objects.create(
-            product=self,
-            quantity_sold=quantity_sold,
-            total_price=total_price
-        )
+        # Verificar se existe uma venda para este produto
+        sale = Sale.objects.filter(product=self).first()
+        
+        if sale:
+            # Atualizar a venda existente
+            sale.quantity_sold += quantity_sold
+            sale.total_price += total_price
+            sale.save()
+        else:
+            # Criar uma nova instância de Sale e salvá-la no banco de dados
+            sale = Sale.objects.create(
+                product=self,
+                quantity_sold=quantity_sold,
+                total_price=total_price
+            )
         
         # Atualizar a quantidade do produto
         self.quantity -= quantity_sold

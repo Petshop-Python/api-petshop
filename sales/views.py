@@ -5,6 +5,7 @@ from django.utils import timezone
 from .models import Sale
 import json
 
+
 @csrf_exempt
 def sell_product(request):
     if request.method == 'POST':
@@ -12,30 +13,21 @@ def sell_product(request):
             data = json.loads(request.body)
             product_id = data.get('product_id')
             quantity_sold = data.get('quantity_sold')
-            
+
             if product_id is None or quantity_sold is None:
                 return JsonResponse({'error': 'Product ID and quantity sold are required'}, status=400)
-            
-            # Verifica se já existe uma venda para o produto
-            try:
-                product = Product.objects.get(id=product_id)
-                sale = Sale.objects.get(product=product)
-                
-                # Atualiza a quantidade vendida, o preço total e a data de atualização
-                sale.quantity_sold += quantity_sold
-                sale.total_price += quantity_sold * product.price
-                sale.update_date = timezone.now()  # Atualiza a data de atualização
-                sale.save()
-            except Sale.DoesNotExist:
-                # Cria uma nova venda se não houver uma venda existente
-                total_price = quantity_sold * product.price
-                sale = Sale.objects.create(product=product, quantity_sold=quantity_sold, total_price=total_price)
+
+            product = Product.objects.get(id=product_id)
+            sale = product.sell(quantity_sold)
 
             return JsonResponse({'message': 'Sale registered successfully', 'sale_id': sale.id}, status=201)
-        
+
         except Product.DoesNotExist:
             return JsonResponse({'error': 'Product not found'}, status=404)
-        
+
+        except ValueError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     else:
