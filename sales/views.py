@@ -18,7 +18,35 @@ def sell_product(request):
                 return JsonResponse({'error': 'Product ID and quantity sold are required'}, status=400)
 
             product = Product.objects.get(id=product_id)
-            sale = product.sell(quantity_sold)
+            unit_price = product.price  # Obtém o preço unitário do produto
+
+            if quantity_sold <= 0:
+                return JsonResponse({'error': 'Quantity sold must be a positive integer'}, status=400)
+
+            if quantity_sold > product.quantity:
+                return JsonResponse({'error': 'Not enough quantity available for sale'}, status=400)
+
+            # Atualiza a quantidade disponível do produto
+            product.quantity -= quantity_sold
+            product.save()
+
+            # Verifica se já existe uma venda para este produto
+            sale = Sale.objects.filter(product=product).first()
+
+            if sale:
+                # Se existir, atualiza a venda existente
+                sale.quantity_sold += quantity_sold
+                sale.total_price += quantity_sold * unit_price
+                sale.update_date = timezone.now()  # Atualiza a data de atualização
+                sale.save()
+            else:
+                # Se não existir, cria uma nova instância de Sale
+                sale = Sale.objects.create(
+                    product=product,
+                    unit_price=unit_price,
+                    quantity_sold=quantity_sold,
+                    total_price=quantity_sold * unit_price
+                )
 
             return JsonResponse({'message': 'Sale registered successfully', 'sale_id': sale.id}, status=201)
 
@@ -64,6 +92,7 @@ def list_sales(request):
                 'product_name': sale.product.product_name,
                 'quantity_sold': sale.quantity_sold,
                 'total_price': str(sale.total_price),
+                'unit_price': str(sale.unit_price),
                 'sale_date': sale.sale_date.strftime('%Y-%m-%d'),
                 'create_date': sale.create_date.strftime('%Y-%m-%d %H:%M:%S'),
                 'update_date': sale.update_date.strftime('%Y-%m-%d %H:%M:%S')
