@@ -6,7 +6,8 @@ from django.utils import timezone
 
 
 class Sale(models.Model):
-    product = models.ForeignKey('product.Product', on_delete=models.CASCADE)  
+    product = models.ForeignKey('product.Product', on_delete=models.CASCADE) 
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Unit Price', null=True)
     quantity_sold = models.PositiveIntegerField(verbose_name='Quantity Sold')
     total_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Total Price')
     sale_date = models.DateField(verbose_name='Sale Date', default=timezone.now)
@@ -15,3 +16,4 @@ class Sale(models.Model):
     
     def __str__(self):
         return f"Sale of {self.quantity_sold} units of {self.product.product_name} on {self.sale_date}"
+
