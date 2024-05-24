@@ -2,6 +2,7 @@ from django.db import models
 from sales.models import Sale
 
 class Product(models.Model):
+    id = models.AutoField(primary_key=True)
     product_code = models.CharField(max_length=100, verbose_name='Product Code')
     product_name = models.CharField(max_length=255, verbose_name='Product')
     quantity = models.PositiveIntegerField(verbose_name='Quantity')

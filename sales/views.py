@@ -18,7 +18,6 @@ def sell_product(request):
                 return JsonResponse({'error': 'Product ID and quantity sold are required'}, status=400)
 
             product = Product.objects.get(id=product_id)
-            unit_price = product.price  # Obtém o preço unitário do produto
 
             if quantity_sold <= 0:
                 return JsonResponse({'error': 'Quantity sold must be a positive integer'}, status=400)
@@ -30,22 +29,27 @@ def sell_product(request):
             product.quantity -= quantity_sold
             product.save()
 
-            # Verifica se já existe uma venda para este produto
-            sale = Sale.objects.filter(product=product).first()
+            # Calcula o preço total
+            unit_price = product.price
+            total_price = unit_price * quantity_sold
+
+            # Verifica se já existe uma venda para este produto no mesmo dia
+            sale = Sale.objects.filter(product=product, sale_date=timezone.now().date()).first()
 
             if sale:
                 # Se existir, atualiza a venda existente
                 sale.quantity_sold += quantity_sold
-                sale.total_price += quantity_sold * unit_price
-                sale.update_date = timezone.now()  # Atualiza a data de atualização
+                sale.total_price += total_price
+                sale.update_date = timezone.now()
                 sale.save()
             else:
                 # Se não existir, cria uma nova instância de Sale
                 sale = Sale.objects.create(
                     product=product,
-                    unit_price=unit_price,
+                    unit_price=product,
                     quantity_sold=quantity_sold,
-                    total_price=quantity_sold * unit_price
+                    total_price=total_price,
+                    sale_date=timezone.now().date()  # Define a data da venda para a data atual
                 )
 
             return JsonResponse({'message': 'Sale registered successfully', 'sale_id': sale.id}, status=201)
@@ -92,7 +96,8 @@ def list_sales(request):
                 'product_name': sale.product.product_name,
                 'quantity_sold': sale.quantity_sold,
                 'total_price': str(sale.total_price),
-                'unit_price': str(sale.unit_price),
+                # Atribui o preço do produto diretamente ao unit_price
+                'unit_price': str(sale.product.price),
                 'sale_date': sale.sale_date.strftime('%Y-%m-%d'),
                 'create_date': sale.create_date.strftime('%Y-%m-%d %H:%M:%S'),
                 'update_date': sale.update_date.strftime('%Y-%m-%d %H:%M:%S')
@@ -103,7 +108,6 @@ def list_sales(request):
         return JsonResponse(serialized_sales, safe=False)
     else:
         return JsonResponse({'error': 'Only GET requests are allowed'}, status=405)
-
 
 @csrf_exempt
 def delete_all_sales(request):

@@ -2,8 +2,9 @@ from django.shortcuts import render
 from product.models import Product
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
-from .models import Product
+from .models import Product,Sale
 from django.http import JsonResponse
+from django.db import transaction
 from django.utils import timezone
 import json
 
@@ -109,12 +110,29 @@ def delete_product(request):
             if product_id is None:
                 return JsonResponse({'success': False, 'error': 'Product ID not provided in the request body.'}, status=400)
             
-            product = Product.objects.get(id=product_id)
-            product.delete()
+            with transaction.atomic():
+                product = Product.objects.get(id=product_id)
+                
+                # Obtém os valores atuais de product e unit_price para cada instância de Sale relacionada ao produto
+                sales_to_update = Sale.objects.filter(product=product)
+                sale_data_to_update = [{'id': sale.id, 'product_id': sale.product_id, 'unit_price_id': sale.unit_price_id} for sale in sales_to_update]
+                
+                product.delete()
+                
+                # Atualiza as instâncias de Sale com os valores armazenados
+                for sale_data in sale_data_to_update:
+                    sale = Sale.objects.get(id=sale_data['id'])
+                    sale.product_id = sale_data['product_id']
+                    sale.unit_price_id = sale_data['unit_price_id']
+                    sale.save(update_fields=['product_id', 'unit_price_id'])
+                
             return JsonResponse({'success': True, 'message': 'Product deleted successfully.'}, status=204)
+        
         except Product.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Product not found.'}, status=404)
+        
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
     else:
-        return JsonResponse({'error': 'Method not allowed'}, status=405)     
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
